@@ -3,19 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../assets/css/common.css"/>
     <title>找色差</title>
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
+        #canvas {
             width: 100%;
-        }
-
-        #container {
+            aspect-ratio: 1;
             margin: 0 auto;
             display: block;
             border: 2px #f6f6f6 solid;
             border-radius: 10px;;
+            box-sizing: border-box;
         }
 
         p {
@@ -24,18 +22,20 @@
     </style>
 </head>
 <body>
-<canvas width="400" height="400" id="container">
-    该浏览器不支持，请更换浏览器
-</canvas>
-<p>
-    <span>当前分数：</span>
-    <span id="score"></span>
-</p>
+<div class="container">
+    <canvas width="400" height="400" id="canvas">
+        该浏览器不支持，请更换浏览器
+    </canvas>
+    <p>
+        <span>当前分数：</span>
+        <span id="score"></span>
+    </p>
+</div>
 <script lang="text/javascript">
     (() => {
-        const container = document.getElementById("container");
+        const canvas = document.getElementById("canvas");
         const scoreBox = document.getElementById("score");
-        const ctx = container.getContext("2d");
+        const ctx = canvas.getContext("2d");
 
         let score = 0;
         let level = 1;
@@ -83,15 +83,15 @@
         }
 
         function draw() {
-            if (container.width !== container.height) {
+            if (canvas.width !== canvas.height) {
                 throw new Error("shape illegal")
             }
             scoreBox.innerHTML = score;
             const n = getN();
             const diff = getDiff(n);
-            const cellWidth = container.width / n;
+            const cellWidth = canvas.width / n;
             const [list, answer] = genColorGrid(n, diff);
-            ctx.clearRect(0, 0, container.width, container.height);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             for (let i = 0; i < n; i++) {
                 for (let j = 0; j < n; j++) {
                     const x = cellWidth * j;
@@ -105,8 +105,8 @@
                     ctx.stroke();
                 }
             }
-            container.onclick = function (e) {
-                const cellWidth = container.width / n;
+            canvas.onclick = function (e) {
+                const cellWidth = canvas.width / n;
                 const row = Math.floor(e.offsetX / cellWidth)
                 const col = Math.floor(e.offsetY / cellWidth);
                 if (col * n + row === answer) {

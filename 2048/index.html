@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../assets/css/common.css"/>
     <title>2048小游戏</title>
     <style>
         html,
@@ -11,7 +12,7 @@
             text-align: center;
         }
 
-        .container {
+        .cell-box {
             background-color: #bbac9f;
             margin: 0 auto;
             border-radius: 10px;
@@ -19,26 +20,32 @@
             padding: 8px;
             row-gap: 5px;
             column-gap: 8px;
+            width: 100%;
+            aspect-ratio: 1;
+            box-sizing: border-box;
         }
 
         .cell {
             width: 100%;
             height: 100%;
-            line-height: 94px;
             background-color: orange;
             border-radius: 5px;
             font-weight: bold;
+            box-sizing: border-box;
         }
     </style>
 </head>
 
 <body>
-<div class="container"></div>
-<p>剩<span class="unDeal"></span>个空方格未合并</p>
-<p>当前分数：<span class="sc"></span></p>
+<div class="container">
+    <div class="cell-box"></div>
+    <p>剩<span class="unDeal"></span>个空方格未合并</p>
+    <p>当前分数：<span class="sc"></span></p>
+</div>
 <script lang="text/javascript">
     (() => {
-        const fontSize = ["unset", "45px", "40px", "30px", "30px"]
+        const fontSize = [0, 45, 40, 30, 30];
+        const touches = {};
         const bgColor = {
             default: '#cdc0b2',
             2: '#eee3d9',
@@ -52,9 +59,9 @@
             512: '#cea30c',
             1024: '#d88e00',
             2048: '#c77800'
-        }
+        };
         const n = 4
-        const container = document.querySelector(".container")
+        const cellBox = document.querySelector(".cell-box")
         const unDeal = document.querySelector(".unDeal")
         const sc = document.querySelector(".sc")
         // 下右两个方向
@@ -67,11 +74,11 @@
         let arr = Array.from({length: n}, () => Array.from({length: n}))
 
         // 画出方格
-        container.style.cssText = `width: ${100 * n}px; height: ${100 * n}px; grid-template-columns: repeat(${n}, minmax(0, 1fr)); grid-template-rows: repeat(${n}, minmax(0, 1fr));`
+        cellBox.style.cssText = `grid-template-columns: repeat(${n}, minmax(0, 1fr)); grid-template-rows: repeat(${n}, minmax(0, 1fr));`
         for (let i = 0; i < n * n; i++) {
             const cell = document.createElement("div")
             cell.className = "cell"
-            container.appendChild(cell)
+            cellBox.appendChild(cell)
         }
 
         const cells = document.querySelectorAll(".cell")
@@ -79,38 +86,35 @@
         genRandomNumber()
         draw()
 
+        // 手势控制
+        cellBox.addEventListener("touchstart", (e) => {
+            for (let t of e.changedTouches) {
+                touches[t.identifier] = {
+                    x: t.screenX,
+                    y: t.screenY
+                };
+            }
+        });
+        cellBox.addEventListener("touchend", (e) => {
+            let isMoving = false;
+            for (let t of e.changedTouches) {
+                if (!isMoving) {
+                    isMoving = true;
+                    const touch = touches[t.identifier];
+                    const offsetX = t.screenX - touch.x;
+                    const offsetY = t.screenY - touch.y;
+                    if (Math.abs(offsetX) >= Math.abs(offsetY)) {
+                        runMerge(offsetX > 0 ? 'ArrowRight' : 'ArrowLeft');
+                    } else {
+                        runMerge(offsetY > 0 ? 'ArrowDown' : 'ArrowUp');
+                    }
+                }
+                delete touches[t.identifier];
+            }
+        });
         // 方向控制
         document.addEventListener("keyup", (e) => {
-            let isChange = false
-            switch (e.key) {
-                case "ArrowUp":
-                    for (let i = 0; i < n; i++) {
-                        isChange = cellMerge(i, 1, false) || isChange
-                    }
-                    break
-                case "ArrowDown":
-                    for (let i = 0; i < n; i++) {
-                        isChange = cellMerge(i, 1, true) || isChange
-                    }
-                    break
-                case "ArrowLeft":
-                    for (let i = 0; i < n; i++) {
-                        isChange = cellMerge(i, 0, false) || isChange
-                    }
-                    break
-                case "ArrowRight":
-                    for (let i = 0; i < n; i++) {
-                        isChange = cellMerge(i, 0, true) || isChange
-                    }
-                    break
-                default:
-                    return
-            }
-            if (isChange) {
-                const rst = genRandomNumber()
-                draw()
-                rst && console.log("你已经没有可合成的方格了")
-            }
+            runMerge(e.key);
         })
 
         function draw() {
@@ -119,7 +123,8 @@
                     const elem = cells[i * n + j]
                     elem.innerHTML = arr[i][j] || ""
                     const cnt = numLen(arr[i][j]) || 0
-                    elem.style.cssText = `font-size: ${fontSize[cnt]}; background-color: ${bgColor[arr[i][j]] || '#cdc0b2'};color: ${arr[i][j] >= 8 ? '#fff' : '#7a6c65'}`
+                    const fSize = fontSize[cnt];
+                    elem.style.cssText = `padding-top: calc(50% - ${fSize / 2 + 10}px); font-size: ${fSize}px; background-color: ${bgColor[arr[i][j]] || '#cdc0b2'};color: ${arr[i][j] >= 8 ? '#fff' : '#7a6c65'}`
                 }
             }
             unDeal.innerHTML = unDealCount
@@ -170,6 +175,43 @@
                 }
             }
             return isChange
+        }
+
+        /**
+         * 执行合并
+         * @param direction 方向
+         */
+        function runMerge(direction) {
+            let isChange = false
+            switch (direction) {
+                case "ArrowUp":
+                    for (let i = 0; i < n; i++) {
+                        isChange = cellMerge(i, 1, false) || isChange
+                    }
+                    break
+                case "ArrowDown":
+                    for (let i = 0; i < n; i++) {
+                        isChange = cellMerge(i, 1, true) || isChange
+                    }
+                    break
+                case "ArrowLeft":
+                    for (let i = 0; i < n; i++) {
+                        isChange = cellMerge(i, 0, false) || isChange
+                    }
+                    break
+                case "ArrowRight":
+                    for (let i = 0; i < n; i++) {
+                        isChange = cellMerge(i, 0, true) || isChange
+                    }
+                    break
+                default:
+                    return
+            }
+            if (isChange) {
+                const rst = genRandomNumber()
+                draw()
+                rst && console.log("你已经没有可合成的方格了")
+            }
         }
 
         function genRandomNumber() {
