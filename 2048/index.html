@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -32,6 +31,9 @@
             border-radius: 5px;
             font-weight: bold;
             box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
     </style>
 </head>
@@ -123,8 +125,7 @@
                     const elem = cells[i * n + j]
                     elem.innerHTML = arr[i][j] || ""
                     const cnt = numLen(arr[i][j]) || 0
-                    const fSize = fontSize[cnt];
-                    elem.style.cssText = `padding-top: calc(50% - ${fSize / 2 + 10}px); font-size: ${fSize}px; background-color: ${bgColor[arr[i][j]] || '#cdc0b2'};color: ${arr[i][j] >= 8 ? '#fff' : '#7a6c65'}`
+                    elem.style.cssText = `font-size: ${fontSize[cnt]}px; background-color: ${bgColor[arr[i][j]] || '#cdc0b2'};color: ${arr[i][j] >= 8 ? '#fff' : '#7a6c65'}`
                 }
             }
             unDeal.innerHTML = unDealCount
