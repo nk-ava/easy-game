@@ -37,8 +37,15 @@
         const scoreBox = document.getElementById("score");
         const ctx = canvas.getContext("2d");
 
+        let scale = 1;
         let score = 0;
         let level = 1;
+
+        const resizeObs = new ResizeObserver(entries => {
+            scale = canvas.width / entries[0].contentRect.width;
+        })
+
+        resizeObs.observe(canvas);
 
         function genClosestColor(diff) {
             const r = Math.floor(Math.random() * 256);
@@ -107,9 +114,9 @@
             }
             canvas.onclick = function (e) {
                 const cellWidth = canvas.width / n;
-                const row = Math.floor(e.offsetX / cellWidth)
-                const col = Math.floor(e.offsetY / cellWidth);
-                if (col * n + row === answer) {
+                const col = Math.floor(e.offsetX * scale / cellWidth)
+                const row = Math.floor(e.offsetY * scale / cellWidth);
+                if (row * n + col === answer) {
                     level++;
                     score += n * (27 - diff);
                     draw();
