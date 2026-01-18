@@ -47,6 +47,17 @@
             cursor: not-allowed;
         }
 
+        .value-picker.disable,
+        .value-picker.game-over {
+            pointer-events: none;
+        }
+
+        .value-picker.game-over .value-item {
+            background-color: #e0e0e0;
+            color: #9e9e9e;
+            cursor: not-allowed;
+        }
+
         .value-item:hover {
             background-color: #ADADAD;
         }
@@ -62,6 +73,10 @@
             float: left;
             border-right: #ADADAD 1px solid;
             border-bottom: #ADADAD 1px solid;
+        }
+
+        .cell.error {
+            background-color: red !important;
         }
 
         .vd-l {
@@ -113,6 +128,7 @@
         <input id="count-input" type="number" max="81" min="1"/>
         <button id="count-submit">确认</button>
     </label>
+    <h2 style="display: none" id="success-tip">你过关！！！！</h2>
 </div>
 <script lang="javascript">
     (() => {
@@ -120,6 +136,7 @@
         const valuePicker = document.querySelector(".value-picker");
         const countInput = document.getElementById("count-input");
         const submitBtn = document.getElementById("count-submit");
+        const successTip = document.getElementById("success-tip");
         const cellElems = Array.from({length: 81}, (_, index) => {
             const elem = document.createElement("span");
             const row = Math.floor(index / 9);
@@ -148,6 +165,7 @@
             return elem;
         });
         const selectItem = new Array(2);
+        let errors = {};
         let list = [];
         let blankCount = 30;
 
@@ -209,7 +227,31 @@
             const index = selectItem[0] * 9 + selectItem[1];
             blockContainer.style.cssText = `--bg${value}: rgb(240, 217, 220)`;
             cellElems[index].style.backgroundColor = `var(--bg${value})`;
+            if (!cellElems[index].innerHTML) {
+                blankCount--;
+            }
             cellElems[index].innerHTML = value;
+            list[selectItem[0]][selectItem[1]].value = Number(value);
+            errors[`${selectItem[0]},${selectItem[1]}`]?.forEach(pos => {
+                cellElems[pos[0] * 9 + pos[1]].classList.remove('error');
+            })
+            delete errors[`${selectItem[0]},${selectItem[1]}`];
+            const err = check(selectItem[0], selectItem[1]);
+            if (err.length) {
+                errors[`${selectItem[0]},${selectItem[1]}`] = err;
+            }
+            Object.values(errors).forEach(pos => {
+                if (!cellElems[pos[0][0] * 9 + pos[0][1]].classList.contains('error')) {
+                    cellElems[pos[0][0] * 9 + pos[0][1]].classList.add('error');
+                }
+                if (!cellElems[pos[1][0] * 9 + pos[1][1]].classList.contains('error')) {
+                    cellElems[pos[1][0] * 9 + pos[1][1]].classList.add('error');
+                }
+            })
+            if (blankCount === 0 && Object.keys(errors).length === 0) {
+                successTip.style.display = 'block';
+                valuePicker.classList.add('game-over');
+            }
         })
 
         // 监听确认
@@ -229,6 +271,7 @@
         function startNewGame(blankCount) {
             const ans = createAns();
             list = ans.map(item => item.map(it => ({value: it, able: false})));
+            errors = {};
             const blankSet = new Set();
             while (blankCount) {
                 let index = Math.floor(Math.random() * 81);
@@ -246,8 +289,13 @@
                     able: true
                 }
             })
+            successTip.style.display = 'none';
+            blockContainer.style.cssText = '';
+            valuePicker.classList.remove('game-over');
             list.forEach((item, i) => {
                 item.forEach(({value}, j) => {
+                    cellElems[i * 9 + j].classList.remove('selected');
+                    cellElems[i * 9 + j].classList.remove('error');
                     cellElems[i * 9 + j].style.backgroundColor = `var(--bg${value})`;
                     cellElems[i * 9 + j].innerHTML = value;
                 })
@@ -325,6 +373,47 @@
                     target[baseRow + i][baseCol + j] = source[i][j];
                 }
             }
+        }
+
+        /**
+         * 检查填入的数字是否正确
+         * @param x 填入数字的x轴坐标
+         * @param y 填入数字的y轴坐标
+         */
+        function check(x, y) {
+            const row = {};
+            const col = {};
+            for (let i = 0; i < 9; i++) {
+                if (list[x][i].value) {
+                    if (!row[list[x][i].value]) {
+                        row[list[x][i].value] = [x, i];
+                    } else {
+                        return [row[list[x][i].value], [x, i]];
+                    }
+                }
+                if (list[i][y].value) {
+                    if (!col[list[i][y].value]) {
+                        col[list[i][y].value] = [i, y];
+                    } else {
+                        return [col[list[i][y].value], [i, y]];
+                    }
+                }
+            }
+            const baseRow = Math.floor(x / 3) * 3;
+            const baseCol = Math.floor(y / 3) * 3;
+            const block = {};
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    if (list[baseRow + i][baseCol + j].value) {
+                        if (!block[list[baseRow + i][baseCol + j].value]) {
+                            block[list[baseRow + i][baseCol + j].value] = [baseRow + i, baseCol + j];
+                        } else {
+                            return [block[list[baseRow + i][baseCol + j].value], [baseRow + i, baseCol + j]]
+                        }
+                    }
+                }
+            }
+            return [];
         }
 
         /**
