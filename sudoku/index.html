@@ -217,7 +217,9 @@
 
         // 监听值输入
         valuePicker.addEventListener("click", ({target}) => {
-            if (selectItem[0] === undefined || selectItem[1] === undefined) {
+            if (selectItem[0] === undefined ||
+                selectItem[1] === undefined ||
+                target.tagName !== 'SPAN') {
                 return;
             }
             if (!list[selectItem[0]][selectItem[1]].able) {
@@ -236,6 +238,7 @@
             cellElems[index].style.backgroundColor = `var(--bg${value})`;
             cellElems[index].innerHTML = value;
             list[selectItem[0]][selectItem[1]].value = Number(value);
+            console.log("errors", errors);
             const entries = Object.entries(errors);
             entries.forEach(([k, v]) => {
                 if (k.includes(`${selectItem[0]},${selectItem[1]}`) && v === previousVal) {
@@ -246,9 +249,10 @@
                 }
             })
             const err = check(selectItem[0], selectItem[1], Number(value));
-            if (err.length) {
-                errors[genKey(err[0], err[1])] = value;
-            }
+            console.log("err", err);
+            err.forEach(item => {
+                errors[genKey(item[0], item[1])] = value;
+            })
             Object.keys(errors).forEach(k => {
                 const pos = k.split("|").map(it => it.split(",").map(Number));
                 if (!cellElems[pos[0][0] * 9 + pos[0][1]].classList.contains('error')) {
@@ -404,12 +408,13 @@
          * @param value 填入的数值
          */
         function check(x, y, value) {
+            const error = [];
             for (let i = 0; i < 9; i++) {
                 if (i !== y && list[x][i].value === value) {
-                    return [[x, i], [x, y]]
+                    error.push([[x, i], [x, y]]);
                 }
-                if (i !== x && !list[i][y].value === value) {
-                    return [[i, y], [x, y]];
+                if (i !== x && list[i][y].value === value) {
+                    error.push([[i, y], [x, y]]);
                 }
             }
             const baseRow = Math.floor(x / 3) * 3;
@@ -417,11 +422,11 @@
             for (let i = 0; i < 3; i++) {
                 for (let j = 0; j < 3; j++) {
                     if (baseRow + i !== x && baseCol + j !== y && list[baseRow + i][baseCol + j].value === value) {
-                        return [[baseRow + i, baseCol + j], [x, y]]
+                        error.push([[baseRow + i, baseCol + j], [x, y]]);
                     }
                 }
             }
-            return [];
+            return error;
         }
 
         /**
