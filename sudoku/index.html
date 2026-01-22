@@ -284,7 +284,7 @@
         submitBtn.addEventListener("click", () => {
             blankCount = Number(countInput.value);
             if (blankCount >= 0 && blankCount <= 81) {
-                startNewGame({ blankCount });
+                startNewGame({blankCount});
             }
         })
 
@@ -299,7 +299,7 @@
             }
         })
 
-        startNewGame(config);
+        startNewGame(config || {blankCount});
         localStorage.removeItem('sudoku-config');
 
         function genKey(p1, p2) {
