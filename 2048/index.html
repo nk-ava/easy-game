@@ -48,6 +48,7 @@
     <div class="cell-box"></div>
     <p>剩<span class="unDeal"></span>个空方格未合并</p>
     <p>当前分数：<span class="sc"></span></p>
+    <button id="resetBtn">重新开始</button>
 </div>
 <script lang="text/javascript">
     (() => {
@@ -68,6 +69,8 @@
             2048: '#c77800'
         };
         const n = 4
+        const config = JSON.parse(localStorage.getItem('2048-config'));
+        const resetBtn = document.getElementById("resetBtn");
         const cellBox = document.querySelector(".cell-box")
         const unDeal = document.querySelector(".unDeal")
         const sc = document.querySelector(".sc")
@@ -93,7 +96,8 @@
         resizeObs.observe(cellBox);
 
         drawGrid();
-        startNew();
+        startNew(config);
+        localStorage.removeItem('2048-config');
 
         // 手势控制
         cellBox.addEventListener("touchstart", (e) => {
@@ -125,6 +129,16 @@
         document.addEventListener("keyup", (e) => {
             runMerge(e.key);
         })
+        // 状态持久化
+        window.addEventListener("beforeunload", () => {
+            localStorage.setItem('2048-config', JSON.stringify({
+                unDealCount,
+                score,
+                arr
+            }));
+        })
+        // 重新开始
+        resetBtn.addEventListener("click", startNew);
 
         /**
          * 画方格
@@ -272,7 +286,7 @@
                 let currentVal = indexType === 0 ? arr[index][useIndex] : arr[useIndex][index];
                 let nextIndex = -1;
                 let nextVal = -1;
-                if (currentVal === undefined) continue;
+                if (currentVal === null) continue;
                 while (i + 1 < n) {
                     i++;
                     nextIndex = isReverse ? n - i - 1 : i;
@@ -319,15 +333,15 @@
                 switch (item.type) {
                     case 'merge': {
                         const {src, target, value} = item.options;
-                        arr[src[0][0]][src[0][1]] = undefined;
-                        arr[src[1][0]][src[1][1]] = undefined;
+                        arr[src[0][0]][src[0][1]] = null;
+                        arr[src[1][0]][src[1][1]] = null;
                         arr[target[0]][target[1]] = value;
                         break;
                     }
                     case 'move': {
                         const {src, target} = item.options;
                         const value = arr[src[0]][src[1]];
-                        arr[src[0]][src[1]] = undefined;
+                        arr[src[0]][src[1]] = null;
                         arr[target[0]][target[1]] = value;
                         break;
                     }
@@ -426,7 +440,7 @@
                             && nextI < n
                             && nextJ >= 0
                             && nextJ < n
-                            && (arr[i][j] === arr[nextI][nextJ] || arr[nextI][nextJ] === undefined)
+                            && (arr[i][j] === arr[nextI][nextJ] || arr[nextI][nextJ] === null)
                         ) {
                             return false
                         }
@@ -436,11 +450,13 @@
             return true
         }
 
-        function startNew() {
-            unDealCount = 0
-            score = 0
-            arr = Array.from({length: n}, () => Array.from({length: n}))
-            genRandomNumber()
+        function startNew(config) {
+            unDealCount = config?.unDealCount || 0;
+            score = config?.score || 0;
+            arr = config?.arr || Array.from({length: n}, () => Array.from({length: n}).fill(null));
+            if (!unDealCount) {
+                genRandomNumber()
+            }
             draw()
         }
 

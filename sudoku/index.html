@@ -27,9 +27,9 @@
         }
 
         .value-picker {
-            display: flex;
-            justify-content: space-between;
-            column-gap: 5px;
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 5px;
         }
 
         .value-item {
@@ -39,6 +39,10 @@
             box-sizing: border-box;
             border: 2px #ADADAD solid;
             border-radius: 5px;
+        }
+
+        .value-item.clear-value {
+            grid-column: 1 / 3;
         }
 
         .value-picker.disable .value-item {
@@ -122,16 +126,18 @@
         <span class="value-item">7</span>
         <span class="value-item">8</span>
         <span class="value-item">9</span>
+        <span class="value-item clear-value">清除</span>
     </div>
     <p class="tip">空白块个数：</p>
     <label>
         <input id="count-input" type="number" max="81" min="1"/>
-        <button id="count-submit">确认</button>
+        <button id="count-submit">重新开始</button>
     </label>
     <h2 style="display: none" id="success-tip">你过关！！！！</h2>
 </div>
 <script lang="javascript">
     (() => {
+        const config = JSON.parse(localStorage.getItem('sudoku-config'));
         const blockContainer = document.querySelector(".block-container");
         const valuePicker = document.querySelector(".value-picker");
         const countInput = document.getElementById("count-input");
@@ -225,20 +231,27 @@
             if (!list[selectItem[0]][selectItem[1]].able) {
                 return;
             }
-            const value = target.innerHTML;
+
+            const value = target.innerHTML === '清除' ? '' : target.innerHTML;
             const index = selectItem[0] * 9 + selectItem[1];
             const previousVal = cellElems[index].innerHTML;
             if (previousVal === value) {
                 return;
             }
-            if (!previousVal) {
+            if (!value) {
+                blankCount++;
+            } else if (!previousVal) {
                 blankCount--;
             }
-            blockContainer.style.cssText = `--bg${value}: rgb(240, 217, 220)`;
+            if (value) {
+                blockContainer.style.cssText = `--bg${value}: rgb(240, 217, 220)`;
+                list[selectItem[0]][selectItem[1]].value = Number(value);
+            } else {
+                blockContainer.style.cssText = '';
+                list[selectItem[0]][selectItem[1]].value = '';
+            }
             cellElems[index].style.backgroundColor = `var(--bg${value})`;
             cellElems[index].innerHTML = value;
-            list[selectItem[0]][selectItem[1]].value = Number(value);
-            console.log("errors", errors);
             const entries = Object.entries(errors);
             entries.forEach(([k, v]) => {
                 if (k.includes(`${selectItem[0]},${selectItem[1]}`) && v === previousVal) {
@@ -249,7 +262,6 @@
                 }
             })
             const err = check(selectItem[0], selectItem[1], Number(value));
-            console.log("err", err);
             err.forEach(item => {
                 errors[genKey(item[0], item[1])] = value;
             })
@@ -272,11 +284,23 @@
         submitBtn.addEventListener("click", () => {
             blankCount = Number(countInput.value);
             if (blankCount >= 0 && blankCount <= 81) {
-                startNewGame(blankCount);
+                startNewGame({ blankCount });
             }
         })
 
-        startNewGame(blankCount);
+        // 状态持久化
+        window.addEventListener("beforeunload", () => {
+            if (blankCount !== 0 || Object.keys(errors).length !== 0) {
+                localStorage.setItem('sudoku-config', JSON.stringify({
+                    list,
+                    blankCount,
+                    errors
+                }))
+            }
+        })
+
+        startNewGame(config);
+        localStorage.removeItem('sudoku-config');
 
         function genKey(p1, p2) {
             if (p1[0] > p2[0]) {
@@ -292,36 +316,48 @@
 
         /**
          * 开始新游戏
-         * @param blankCount 空白块个数
+         * @param config 数独初始化配置
          */
-        function startNewGame(blankCount) {
-            const ans = createAns();
-            list = ans.map(item => item.map(it => ({value: it, able: false})));
-            errors = {};
-            const blankSet = new Set();
-            while (blankCount) {
-                let index = Math.floor(Math.random() * 81);
-                while (blankSet.has(index)) {
-                    index = (index + 1) % 81;
+        function startNewGame(config) {
+            if (!config?.list) {
+                const ans = createAns();
+                list = ans.map(item => item.map(it => ({value: it, able: false})));
+                errors = {};
+                const blankSet = new Set();
+                while (config?.blankCount) {
+                    let index = Math.floor(Math.random() * 81);
+                    while (blankSet.has(index)) {
+                        index = (index + 1) % 81;
+                    }
+                    blankSet.add(index);
+                    config.blankCount--;
                 }
-                blankSet.add(index);
-                blankCount--;
+                blankSet.forEach(item => {
+                    const row = Math.floor(item / 9);
+                    const col = item % 9;
+                    list[row][col] = {
+                        value: '',
+                        able: true
+                    }
+                })
+            } else {
+                list = config.list;
+                errors = config?.errors || {};
             }
-            blankSet.forEach(item => {
-                const row = Math.floor(item / 9);
-                const col = item % 9;
-                list[row][col] = {
-                    value: '',
-                    able: true
-                }
-            })
             successTip.style.display = 'none';
             blockContainer.style.cssText = '';
             valuePicker.classList.remove('game-over');
+            const errorsKey = Object.keys(errors);
             list.forEach((item, i) => {
                 item.forEach(({value}, j) => {
+                    if (errorsKey.some(item => item.includes(`${i},${j}`))) {
+                        if (!cellElems[i * 9 + j].classList.contains('error')) {
+                            cellElems[i * 9 + j].classList.add('error');
+                        }
+                    } else {
+                        cellElems[i * 9 + j].classList.remove('error');
+                    }
                     cellElems[i * 9 + j].classList.remove('selected');
-                    cellElems[i * 9 + j].classList.remove('error');
                     cellElems[i * 9 + j].style.backgroundColor = `var(--bg${value})`;
                     cellElems[i * 9 + j].innerHTML = value;
                 })
