@@ -108,6 +108,9 @@
                 };
             }
         });
+        cellBox.addEventListener("touchmove", (e) => {
+            e.preventDefault();
+        })
         cellBox.addEventListener("touchend", (e) => {
             let isMoving = false;
             for (let t of e.changedTouches) {
